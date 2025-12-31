@@ -38,6 +38,7 @@ jobs:
           NIXPKGS_ALLOW_UNFREE: "1"
 
       - name: Create Pull Request
+        id: cpr
         if: steps.check.outputs.updated == 'true'
         uses: peter-evans/create-pull-request@v6
         with:
@@ -55,3 +56,9 @@ jobs:
           labels: |
             automated
             update
+
+      - name: Enable auto-merge
+        if: steps.cpr.outputs.pull-request-number
+        run: gh pr merge --auto --squash "${{ steps.cpr.outputs.pull-request-number }}"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
