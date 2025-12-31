@@ -1,37 +1,29 @@
 # cursor-nix
 
-Auto-updating Nix flake for [Cursor](https://cursor.com) - The AI Code Editor.
+auto-updating nix flake for [Cursor](https://cursor.com) — the AI code editor.
 
-Fetches directly from Cursor's official apt repository and auto-updates via GitHub Actions.
+fetches directly from cursor's official apt repository and auto-updates via github actions every 6 hours.
 
-## Usage
+## usage
 
-### As a flake input
+### as a flake input
 
 ```nix
 {
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
-    cursor.url = "github:YOUR_USERNAME/cursor-nix";
+    cursor.url = "github:bdsqqq/cursor-nix";
     cursor.inputs.nixpkgs.follows = "nixpkgs";
   };
 
-  outputs = { self, nixpkgs, cursor, ... }: {
-    # Option 1: Use the overlay
+  outputs = { nixpkgs, cursor, ... }: {
     nixosConfigurations.myhost = nixpkgs.lib.nixosSystem {
-      modules = [
-        {
-          nixpkgs.overlays = [ cursor.overlays.default ];
-          environment.systemPackages = [ pkgs.cursor ];
-        }
-      ];
-    };
-
-    # Option 2: Use the package directly
-    nixosConfigurations.myhost = nixpkgs.lib.nixosSystem {
+      system = "x86_64-linux";
       modules = [
         ({ pkgs, ... }: {
-          environment.systemPackages = [ cursor.packages.x86_64-linux.default ];
+          environment.systemPackages = [ 
+            cursor.packages.x86_64-linux.default 
+          ];
         })
       ];
     };
@@ -39,34 +31,42 @@ Fetches directly from Cursor's official apt repository and auto-updates via GitH
 }
 ```
 
-### Run directly
-
-```bash
-nix run github:YOUR_USERNAME/cursor-nix
-```
-
-### In home-manager
+### with home-manager
 
 ```nix
-home.packages = [ inputs.cursor.packages.x86_64-linux.default ];
+{ inputs, ... }: {
+  home.packages = [ inputs.cursor.packages.x86_64-linux.default ];
+}
 ```
 
-## Auto-updates
+### run directly
 
-A GitHub Action runs every 6 hours to check Cursor's apt repository for new versions. When found, it:
+```bash
+nix run github:bdsqqq/cursor-nix
+```
 
-1. Updates `package.nix` with new version and hash
-2. Tests that the build succeeds
-3. Creates a PR for review
+## auto-updates
 
-To enable: push this repo to GitHub and enable Actions.
+a github action runs every 6 hours to check cursor's apt repository for new versions. when found, it:
 
-## Manual update
+1. updates `package.nix` with new version and hash
+2. tests that the build succeeds  
+3. creates a PR and auto-merges it
+
+## manual update
 
 ```bash
 ./update.sh
 ```
 
-## License
+## why this exists
 
-The packaging is MIT. Cursor itself is proprietary.
+cursor releases multiple times per week. the nixpkgs `code-cursor` package lags behind and the maintainer stepped back. this flake:
+
+- pulls from cursor's official apt repo (same source as `apt install cursor`)
+- auto-updates without manual intervention
+- builds and tests before merging
+
+## license
+
+packaging is MIT. cursor itself is proprietary.
