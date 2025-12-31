@@ -1,0 +1,57 @@
+name: Update Cursor
+
+on:
+  schedule:
+    # Run every 6 hours
+    - cron: '0 */6 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check for updates
+        id: check
+        run: |
+          chmod +x ./update.sh
+          ./update.sh
+
+      - name: Update flake.lock
+        if: steps.check.outputs.updated == 'true'
+        run: |
+          nix flake update
+        env:
+          NIX_CONFIG: "experimental-features = nix-command flakes"
+
+      - name: Test build
+        if: steps.check.outputs.updated == 'true'
+        run: |
+          nix build --accept-flake-config
+        env:
+          NIX_CONFIG: "experimental-features = nix-command flakes"
+          NIXPKGS_ALLOW_UNFREE: "1"
+
+      - name: Create Pull Request
+        if: steps.check.outputs.updated == 'true'
+        uses: peter-evans/create-pull-request@v6
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          commit-message: "chore: update cursor ${{ steps.check.outputs.old_version }} -> ${{ steps.check.outputs.new_version }}"
+          title: "Update Cursor to ${{ steps.check.outputs.new_version }}"
+          body: |
+            Automated update from Cursor's apt repository.
+            
+            **Version:** ${{ steps.check.outputs.old_version }} → ${{ steps.check.outputs.new_version }}
+            
+            The build was tested successfully before creating this PR.
+          branch: update-cursor-${{ steps.check.outputs.new_version }}
+          delete-branch: true
+          labels: |
+            automated
+            update
