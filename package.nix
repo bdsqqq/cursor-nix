@@ -6,7 +6,6 @@
   makeWrapper,
   wrapGAppsHook3,
   autoPatchelfHook,
-  # Runtime dependencies
   alsa-lib,
   at-spi2-atk,
   at-spi2-core,
@@ -28,13 +27,13 @@
   systemd,
   xorg,
   libxkbfile,
-  # Wayland
   wayland,
 }:
 
 let
   version = "2.2.44";
   sha256 = "9f86f1dd34f8afae694667ce9a14f613589a31337d8d60c039d6920feb87f5d5";
+  upstreamFilename = "pool/stable/c/cu/cursor_2.2.44_amd64.deb";
 
   runtimeDeps = [
     alsa-lib
@@ -73,7 +72,7 @@ stdenv.mkDerivation {
   inherit version;
 
   src = fetchurl {
-    url = "https://downloads.cursor.com/aptrepo/pool/stable/c/cu/cursor_${version}_amd64.deb";
+    url = "https://downloads.cursor.com/aptrepo/${upstreamFilename}";
     inherit sha256;
   };
 
@@ -86,9 +85,9 @@ stdenv.mkDerivation {
 
   buildInputs = runtimeDeps;
 
+  # dpkg-deb --fsys-tarfile avoids fakeroot/setuid issues that break nix sandbox
   unpackPhase = ''
     runHook preUnpack
-    # Use dpkg-deb with --fsys-tarfile to extract without setuid issues
     mkdir -p extracted
     dpkg-deb --fsys-tarfile $src | tar -xf - -C extracted --no-same-owner --no-same-permissions
     mv extracted/* .
@@ -101,30 +100,28 @@ stdenv.mkDerivation {
 
     mkdir -p $out/lib $out/share $out/bin
 
-    # copy cursor app files
     cp -r usr/share/cursor $out/lib/cursor
-    
-    # copy desktop files, icons, completions, etc.
     cp -r usr/share/applications $out/share/ || true
     cp -r usr/share/appdata $out/share/ || true
     cp -r usr/share/bash-completion $out/share/ || true
     cp -r usr/share/icons $out/share/ 2>/dev/null || true
     cp -r usr/share/pixmaps $out/share/ 2>/dev/null || true
 
-    # fix desktop file paths
     if [ -f $out/share/applications/cursor.desktop ]; then
       substituteInPlace $out/share/applications/cursor.desktop \
-        --replace-fail "/usr/share/cursor/cursor" "$out/bin/cursor"
+        --replace-fail "/usr/share/cursor/cursor" "$out/bin/cursor" \
+        --replace-warn "Icon=co.anysphere.cursor" "Icon=$out/lib/cursor/resources/app/resources/linux/code.png"
     fi
     
     if [ -f $out/share/applications/cursor-url-handler.desktop ]; then
       substituteInPlace $out/share/applications/cursor-url-handler.desktop \
-        --replace-fail "/usr/share/cursor/cursor" "$out/bin/cursor"
+        --replace-fail "/usr/share/cursor/cursor" "$out/bin/cursor" \
+        --replace-warn "Icon=co.anysphere.cursor" "Icon=$out/lib/cursor/resources/app/resources/linux/code.png"
     fi
 
-    # wrap the binary with runtime deps and electron flags
+    # --no-sandbox required: we strip setuid during extraction, so chrome-sandbox can't elevate
     makeWrapper $out/lib/cursor/cursor $out/bin/cursor \
-      --prefix LD_LIBRARY_PATH : "${lib.makeLibraryPath runtimeDeps}" \
+      --add-flags "--no-sandbox" \
       --add-flags "--ozone-platform-hint=auto" \
       --add-flags "--enable-features=WaylandWindowDecorations"
 

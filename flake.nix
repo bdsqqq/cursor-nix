@@ -26,10 +26,6 @@
           type = "app";
           program = "${cursor}/bin/cursor";
         };
-
-        overlays.default = final: prev: {
-          cursor = cursor;
-        };
       }
     ) // {
       # expose overlay for use in other flakes
