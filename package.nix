@@ -31,9 +31,9 @@
 }:
 
 let
-  version = "2.2.44";
-  sha256 = "9f86f1dd34f8afae694667ce9a14f613589a31337d8d60c039d6920feb87f5d5";
-  upstreamFilename = "pool/stable/c/cu/cursor_2.2.44_amd64.deb";
+  version = "2.3.34";
+  sha256 = "87ba3c55f8c2a4e5961df59be987f26426ddfef841bbdc71e9bc9c3ca074638a";
+  upstreamFilename = "pool/stable/c/cu/cursor_2.3.34_amd64.deb";
 
   runtimeDeps = [
     alsa-lib
